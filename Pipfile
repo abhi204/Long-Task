@@ -6,7 +6,11 @@ name = "pypi"
 [packages]
 django = "*"
 djangorestframework = "*"
-celery = "*"
+celery = "==4.4.7"
+redis = "*"
+django-celery-beat = "*"
+django-celery-results = "*"
+pandas = "*"
 
 [dev-packages]
 
