@@ -1,31 +1,66 @@
-import datetime
-from upload_app.models import ProcessedData
+from django.db import connection
+from shared.helpers import redis_instance
+from upload_app.models import UploadStatus
 
-def process_row(task_id: str, csv_row: list):
+def create_table(table_name):
+    '''
+    Method to create a table for storing the processed data from CSV.
+    '''
+    with connection.cursor() as c:
+        query = f'CREATE TABLE {table_name} (\
+        Sid SERIAL PRIMARY KEY, \
+        Region varchar(255), \
+        Country varchar(255), \
+        "Item Type" varchar(255), \
+        "Sales Channel" varchar(255), \
+        "Order Priority" varchar(255), \
+        "Order ID" varchar(255), \
+        "Units Sold" FLOAT,\
+        "Unit Price" FLOAT,\
+        "Unit Cost" FLOAT,\
+        "Total Revenue" FLOAT,\
+        "Total Cost" FLOAT,\
+        "Total Profit" FLOAT\
+        );'
+        c.execute(query)
+
+def process_row(table_name: str, row_data: list):
     '''
     processes the incoming data from csv file and saves it to the database
     '''
 
-    format_str = '%m/%d/%Y' # The date format in csv_row
+    row_string = ""
+    for data in row_data:
+        # Escape string characters before saving in database
+        if type(data) is str:
+            data = data.replace("'", "''")
+            data = data.replace('"', '""')
+        row_string += f"'{data}',"
+    row_string = row_string[:-1] # remove trailing ","
 
-    data = dict(
-        task_id=task_id,
-        region = csv_row[0],
-        country=csv_row[1],
-        item_type=csv_row[2],
-        sales_channel=csv_row[3],
-        order_priority=csv_row[4],
-        order_date=datetime.datetime.strptime(csv_row[5], format_str).date(),
-        order_id=csv_row[6],
-        ship_date=datetime.datetime.strptime(csv_row[7], format_str).date(),
-        units_sold=csv_row[8],
-        unit_price=csv_row[9],
-        unit_cost=csv_row[10],
-    )
+    with connection.cursor() as c:
+        query = f'''INSERT INTO {table_name} (\
+        `Region`,\
+        `Country`,\
+        `Item Type`,\
+        `Sales Channel`,\
+        `Order Priority`,\
+        `Order ID`,\
+        `Units Sold`,\
+        `Unit Price`,\
+        `Unit Cost`,\
+        `Total Revenue`,\
+        `Total Cost`,\
+        `Total Profit`\
+        )\
+        VALUES ({row_string})'''
+        c.execute(query)
 
-    # Process csv data to determine total cost,revenue & profit for the current csv file row
-    data['total_revenue'] = data['units_sold'] * data['unit_price'] 
-    data['total_cost'] = data['units_sold'] * data['unit_cost']
-    data['total_profit'] = data['total_revenue'] - data['total_cost']
+def upload_successful(table_name):
+    # Allow user to perform next upload
+    upload_details = UploadStatus.objects.get(table_name=table_name)
+    upload_details.task_completed = True
+    upload_details.save()
 
-    ProcessedData.objects.create(**data)
+    # delete associated data from redis
+    redis_instance.delete(table_name)

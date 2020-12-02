@@ -1,36 +1,44 @@
 import pandas, os, json
 from django.conf import settings
+from django.db import connection
 from celery import shared_task
-from upload_app.helpers import process_row
-from upload_app.models import ProcessedData
+from upload_app.helpers import create_table, process_row, upload_successful
 from shared.helpers import redis_instance
 
-@shared_task(name="start_upload")
-def start_upload_task(task_id: str):
+@shared_task(name='start_upload')
+def start_upload_task(task_name: str):
+    create_table(task_name)
+
     df = pandas.read_csv(os.path.join(settings.BASE_DIR, 'sample_data.csv'))
     rows = [list(row) for row in df.values]
     current_row_index = 0
     
-    task_status = {"status": "run"}
-    if not redis_instance.get(task_id):
-        redis_instance.set(task_id, json.dumps(task_status))
+    task_status = {'status': 'run'}
+    if not redis_instance.get(task_name):
+        redis_instance.set(task_name, json.dumps(task_status))
     else:
-        task_status = json.loads(redis_instance.get(task_id))
+        task_status = json.loads(redis_instance.get(task_name))
 
-    while task_status.get("status") == "run" and current_row_index < len(rows):
+
+    while task_status.get('status') == 'run' and current_row_index < len(rows):
         row = rows[current_row_index]
-        process_row(task_id, row)
+        process_row(task_name, row)
         current_row_index += 1
-        task_status = json.loads(redis_instance.get(task_id))
+        task_status = json.loads(redis_instance.get(task_name))
     
-    if task_status.get("status") == "pause":
-        task_status = json.loads(redis_instance.get(task_id))
+    if task_status.get('status') == 'pause':
+        task_status = json.loads(redis_instance.get(task_name))
         task_status['current_row_index'] = current_row_index
-        redis_instance.set(task_id, json.dumps(task_status))
+        redis_instance.set(task_name, json.dumps(task_status))
+        return
+    
+    # Upload finished successfully
+    upload_successful(task_name)
+    
 
 @shared_task(name="resume_upload")
-def resume_upload_task(task_id: str):
-    task_status = json.loads(redis_instance.get(task_id))
+def resume_upload_task(task_name: str):
+    task_status = json.loads(redis_instance.get(task_name))
     
     df = pandas.read_csv(os.path.join(settings.BASE_DIR, 'sample_data.csv'))
     rows = [list(row) for row in df.values]
@@ -38,20 +46,27 @@ def resume_upload_task(task_id: str):
 
     while task_status.get("status") == "run" and current_row_index < len(rows):
         row = rows[current_row_index]
-        process_row(task_id, row)
+        process_row(task_name, row)
         current_row_index += 1
-        task_status = json.loads(redis_instance.get(task_id))
+        task_status = json.loads(redis_instance.get(task_name))
     
     if task_status.get("status") == "pause":
-        task_status = json.loads(redis_instance.get(task_id))
+        task_status = json.loads(redis_instance.get(task_name))
         task_status['current_row_index'] = current_row_index
-        redis_instance.set(task_id, json.dumps(task_status))
+        redis_instance.set(task_name, json.dumps(task_status))
+        return
+    
+    # Upload finished successfully
+    upload_successful(task_name)
 
 @shared_task(name="rollback_upload")
-def rollback_upload_task(task_id: str):
-
-    # delete task assosiated data from redis
-    redis_instance.delete(task_id)
+def rollback_upload_task(task_name: str):
+    UploadStatus.objects.filter(table_name=task_name).delete()
     
-    # Delete rows from DB (Rollback changes)
-    ProcessedData.objects.filter(task_id=task_id).delete()
+    # delete task associated data from redis
+    redis_instance.delete(task_name)
+    
+    # Drop table
+    with connection.cursor() as c:
+        query = f"DROP TABLE IF EXISTS {task_name}"
+        c.execute(query)
