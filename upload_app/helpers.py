@@ -24,7 +24,7 @@ def create_table(table_name):
         );'
         c.execute(query)
 
-def process_row(table_name: str, row_data: list):
+def process_row(table_name: str, row_data: list, row_num: int):
     '''
     processes the incoming data from csv file and saves it to the database
     '''
@@ -40,6 +40,7 @@ def process_row(table_name: str, row_data: list):
 
     with connection.cursor() as c:
         query = f'''INSERT INTO {table_name} (\
+        `Sid`,\
         `Region`,\
         `Country`,\
         `Item Type`,\
@@ -53,7 +54,7 @@ def process_row(table_name: str, row_data: list):
         `Total Cost`,\
         `Total Profit`\
         )\
-        VALUES ({row_string})'''
+        VALUES ('{row_num}',{row_string})'''
         c.execute(query)
 
 def upload_successful(table_name):

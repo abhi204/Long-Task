@@ -22,7 +22,7 @@ def start_upload_task(task_name: str):
 
     while task_status.get('status') == 'run' and current_row_index < len(rows):
         row = rows[current_row_index]
-        process_row(task_name, row)
+        process_row(task_name, row, current_row_index)
         current_row_index += 1
         task_status = json.loads(redis_instance.get(task_name))
     
@@ -46,7 +46,7 @@ def resume_upload_task(task_name: str):
 
     while task_status.get("status") == "run" and current_row_index < len(rows):
         row = rows[current_row_index]
-        process_row(task_name, row)
+        process_row(task_name, row, current_row_index)
         current_row_index += 1
         task_status = json.loads(redis_instance.get(task_name))
     
