@@ -11,6 +11,7 @@ redis = "*"
 django-celery-beat = "*"
 django-celery-results = "*"
 pandas = "*"
+psycopg2-binary = "*"
 
 [dev-packages]
 

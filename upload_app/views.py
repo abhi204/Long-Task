@@ -38,8 +38,6 @@ class StartUploadView(APIView):
             "task_name": task_name
         })
 
-        # except:
-        #     return Response(status=status.HTTP_400_BAD_REQUEST)
 
 class PauseUploadView(APIView):
 
@@ -48,7 +46,6 @@ class PauseUploadView(APIView):
         Pause ongoing upload task
         '''
 
-        # try:
         task_name = request.data.get('task_name')
         
         # set task status to paused
@@ -60,8 +57,6 @@ class PauseUploadView(APIView):
             "task_name": task_name
         })
 
-        # except:
-        #     return Response(status=status.HTTP_400_BAD_REQUEST)
 
 class ResumeUploadView(APIView):
 
@@ -70,7 +65,6 @@ class ResumeUploadView(APIView):
         Resume a paused upload task
         '''
 
-        # try:
         task_name = request.data.get('task_name')
     
         # Set task status to run
@@ -85,8 +79,6 @@ class ResumeUploadView(APIView):
             "task_name": task_name
         })
 
-        # except:
-        #     return Response(status=status.HTTP_400_BAD_REQUEST)
 
 class TerminateUploadView(APIView):
 
@@ -94,7 +86,6 @@ class TerminateUploadView(APIView):
         '''
         Terminate an ongoing upload task
         '''
-        # try:
         task_name = request.data.get('task_name')
 
         # Set task status to terminate
@@ -109,15 +100,13 @@ class TerminateUploadView(APIView):
             "task_name": task_name
         })
         
-        # except:
-        #     return Response(status=status.HTTP_400_BAD_REQUEST)
+
 
 class UploadProgressView(APIView):
     def post(self, request, format=None):
         '''
         Gets Upload progress.
         '''
-        # try:
         user_id = request.data.get('user_id')
         task_name = request.data.get('task_name')
 
@@ -133,6 +122,3 @@ class UploadProgressView(APIView):
             return Response({
                 "progress": "complete"
             })
-
-        # except:
-        #     return Response(status=status.HTTP_400_BAD_REQUEST)

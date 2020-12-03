@@ -1,0 +1,89 @@
+version: "3"
+services:
+  db:
+    image: postgres
+    environment:
+    - POSTGRES_DB=postgres
+    - POSTGRES_USER=postgres
+    - POSTGRES_PASSWORD=postgres
+    ports:
+    - "5432:5432"
+    # networks:
+    #   - db_network
+  # db:
+  #   image: postgres:10-alpine
+  #   container_name: postgres_container
+  #   env_file:
+  #     - ./config/env/db_env
+  #   volumes:
+  #     - ./docker_volumes/pg_data:/var/lib/postgres/data/
+  #   port: 5432:5432
+
+  web:
+    container_name: django_container
+    build: .
+    # env_file:
+    #   - ./config/env/web_env
+    volumes:
+      - .:/code/
+    depends_on:
+      - db
+      - redis
+    ports:
+      - "8000:8000"
+    restart: always
+    command: bash -c "python manage.py makemigrations && python manage.py migrate && python manage.py collectstatic --noinput && python manage.py runserver 0.0.0.0:8000"
+    
+
+  celery:
+    container_name: celery_container
+    build: .
+    # env_file:
+    #   - ./config/env/web_env
+    volumes:
+      - .:/code/
+    # ports: # Use nginx in production
+    #   - 5555:5555
+    depends_on:
+      # - web
+      - db
+      - redis
+    restart: always
+    command: bash -c "celery -A long_task worker --loglevel=info"
+
+
+  redis:
+    container_name: redis_container
+    image: redis:6.0.9-alpine
+    ports:
+      - "6379:6379"
+    restart: on-failure
+    # env_file:
+    #   - ./config/env/redis_env
+
+
+  # nginx:
+  #   container_name: celebMark_nginx
+  #   image: nginx:1.13-alpine
+  #   ports:
+  #     # 5000->Static(React),  8000->gunicorn(Django/HTTP)
+  #     - 5000:80
+  #     - 8000:90
+  #   volumes:
+  #     - ./config/nginx/conf.d:/etc/nginx/conf.d
+  #     - ./celebMark:/code/
+  #     - ./logs:/logs/
+  #     - ./frontend:/frontend/
+  #   depends_on:
+  #     - web
+  #   networks:
+  #     - nginx_network
+      
+# networks:
+#   web_network:
+#     driver: bridge
+#   db_network:
+#     driver: bridge
+
+# volumes:
+#   postgres_data:
