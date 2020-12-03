@@ -1,6 +1,18 @@
+import uuid
 from django.db import connection
 from shared.helpers import redis_instance
 from upload_app.models import UploadStatus
+
+def generate_task_name():
+    '''
+    generates a random unique name for task
+    '''
+    return "table" + str(uuid.uuid4()).replace('-','')
+
+def get_table_names():
+    '''
+    returns a list of table names present in database
+    '''
 
 def create_table(table_name):
     '''
@@ -8,9 +20,9 @@ def create_table(table_name):
     '''
     with connection.cursor() as c:
         query = f'CREATE TABLE {table_name} (\
-        Sid SERIAL PRIMARY KEY, \
-        Region varchar(255), \
-        Country varchar(255), \
+        "Sid" SERIAL PRIMARY KEY, \
+        "Region" varchar(255), \
+        "Country" varchar(255), \
         "Item Type" varchar(255), \
         "Sales Channel" varchar(255), \
         "Order Priority" varchar(255), \
@@ -40,19 +52,19 @@ def process_row(table_name: str, row_data: list, row_num: int):
 
     with connection.cursor() as c:
         query = f'''INSERT INTO {table_name} (\
-        `Sid`,\
-        `Region`,\
-        `Country`,\
-        `Item Type`,\
-        `Sales Channel`,\
-        `Order Priority`,\
-        `Order ID`,\
-        `Units Sold`,\
-        `Unit Price`,\
-        `Unit Cost`,\
-        `Total Revenue`,\
-        `Total Cost`,\
-        `Total Profit`\
+        "Sid",\
+        "Region",\
+        "Country",\
+        "Item Type",\
+        "Sales Channel",\
+        "Order Priority",\
+        "Order ID",\
+        "Units Sold",\
+        "Unit Price",\
+        "Unit Cost",\
+        "Total Revenue",\
+        "Total Cost",\
+        "Total Profit"\
         )\
         VALUES ('{row_num}',{row_string})'''
         c.execute(query)

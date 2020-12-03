@@ -3,9 +3,9 @@ from django.conf import settings
 from django.db import connection
 from celery import shared_task
 from upload_app.helpers import create_table, process_row, upload_successful
-from shared.helpers import redis_instance
+from shared.helpers import redis_instance, update_task_progress
 
-@shared_task(name='start_upload')
+@shared_task
 def start_upload_task(task_name: str):
     create_table(task_name)
 
@@ -24,8 +24,7 @@ def start_upload_task(task_name: str):
         row = rows[current_row_index]
         process_row(task_name, row, current_row_index)
         current_row_index += 1
-        progress = current_row_index/len(rows)
-        redis_instance.set(f"{task_name}__progress", progress)
+        update_task_progress(task_name, current_row_index, len(rows))
         task_status = json.loads(redis_instance.get(task_name))
     
     if task_status.get('status') == 'pause':
@@ -38,7 +37,7 @@ def start_upload_task(task_name: str):
     upload_successful(task_name)
     
 
-@shared_task(name="resume_upload")
+@shared_task
 def resume_upload_task(task_name: str):
     task_status = json.loads(redis_instance.get(task_name))
     
@@ -50,6 +49,7 @@ def resume_upload_task(task_name: str):
         row = rows[current_row_index]
         process_row(task_name, row, current_row_index)
         current_row_index += 1
+        update_task_progress(task_name, current_row_index, len(rows))
         task_status = json.loads(redis_instance.get(task_name))
     
     if task_status.get("status") == "pause":
@@ -61,7 +61,7 @@ def resume_upload_task(task_name: str):
     # Upload finished successfully
     upload_successful(task_name)
 
-@shared_task(name="rollback_upload")
+@shared_task
 def rollback_upload_task(task_name: str):
     UploadStatus.objects.filter(table_name=task_name).delete()
     

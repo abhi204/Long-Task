@@ -3,7 +3,7 @@ from django.conf import settings
 from celery import shared_task
 from download_app.helpers import count_rows, process_csv, download_successful
 from download_app.models import DownloadStatus
-from shared.helpers import redis_instance
+from shared.helpers import redis_instance, update_task_progress
 
 @shared_task(name='start_download')
 def start_download_task(task_name: str, filename: str):
@@ -39,8 +39,7 @@ def start_download_task(task_name: str, filename: str):
     while task_status.get('status') == 'run' and current_row < row_count:
         process_csv(filename, task_name, current_row)
         current_row += 1
-        progress = current_row/row_count
-        redis_instance.set(f"{task_name}__progress", progress)
+        update_task_progress(task_name, current_row, row_count)
         task_status = json.loads(redis_instance.get(task_name))
     
     if task_status.get('status') == 'pause':
@@ -55,6 +54,7 @@ def start_download_task(task_name: str, filename: str):
 
 @shared_task(name="resume_download")
 def resume_download_task(task_name: str):
+    filename = DownloadStatus.objects.get(table_name=task_name).filename
     task_status = json.loads(redis_instance.get(task_name))
     row_count = count_rows(task_name)
     current_row = task_status.get('current_row')
@@ -62,6 +62,7 @@ def resume_download_task(task_name: str):
     while task_status.get('status') == 'run' and current_row < row_count:
         process_csv(filename, task_name, current_row)
         current_row += 1
+        update_task_progress(task_name, current_row, row_count)
         task_status = json.loads(redis_instance.get(task_name))
     
     if task_status.get('status') == 'pause':

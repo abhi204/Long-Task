@@ -16,8 +16,9 @@ def process_csv(filename, table_name, row_sid):
     '''
     row = []
     with connection.cursor() as c:
-        query = f"SELECT * FROM {table_name} WHERE Sid={row_sid}"
-        row = list(c.execute(query).fetchone())
+        query = f'SELECT * FROM {table_name} WHERE "Sid"={row_sid}'
+        c.execute(query)
+        row = list(c.fetchone())
     
     with open(os.path.join(settings.BASE_DIR, 'static', f"{filename}.csv"), "a+") as csv_file:
         csvwriter = csv.writer(csv_file)
