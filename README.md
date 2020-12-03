@@ -32,11 +32,14 @@ Rows are constantly being read from **sample_data.csv** and stored in the databa
 	- See Progress
 	- Terminate
 
+(Redis is used to store the state of a process. A running process stops if its corresponding task_status is set to "pause" in the redis store. Similarly, a task is resumed by changing the task_status to "run". The task_status also stores some additional data such as progress of the task as well as last processed row)
+
+
 ## Techstack
 
 - **Framework** - Django
 - **Database** - PostgreSQL + Redis
-- **Language** - Pythob 
+- **Language** - Python
 
 ## ⬇️ Run with docker-compose
 
