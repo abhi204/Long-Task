@@ -110,3 +110,29 @@ class TerminateUploadView(APIView):
         
         except:
             return Response(status=status.HTTP_400_BAD_REQUEST)
+
+class UploadProgressView(APIView):
+    def post(self, request, format=None):
+        '''
+        Gets Upload progress.
+        '''
+        try:
+            user_id = request.data.get('user_id')
+            task_name = request.data.get('task_name')
+
+            # Check if requested table exists
+            if not UploadStatus.objects.filter(user_id=user_id, task_completed=True, table_name=task_name).exists():
+                return Response({"message": "Upload pending or invalid task_name"}, status=status.HTTP_403_FORBIDDEN)
+            
+            if redis_instance.get(f"{task_name}__progress"):
+                return Response({
+                    "progress": redis_instance.get(f"{task_name}__progress")
+                })
+            else: # progress removed from redis on task completion
+                return Response({
+                    "progress": "complete"
+                })
+
+
+        except:
+            return Response(status=status.HTTP_400_BAD_REQUEST)

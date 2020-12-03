@@ -24,6 +24,8 @@ def start_upload_task(task_name: str):
         row = rows[current_row_index]
         process_row(task_name, row, current_row_index)
         current_row_index += 1
+        progress = current_row_index/len(rows)
+        redis_instance.set(f"{task_name}__progress", progress)
         task_status = json.loads(redis_instance.get(task_name))
     
     if task_status.get('status') == 'pause':
@@ -65,6 +67,7 @@ def rollback_upload_task(task_name: str):
     
     # delete task associated data from redis
     redis_instance.delete(task_name)
+    redis_instance.delete(f"{task_name}__progress")
     
     # Drop table
     with connection.cursor() as c:
